@@ -217,9 +217,7 @@ private struct TubeLayers: View {
 
     /// Places a view at a design-grid frame, scaled to points.
     private func place(_ view: some View, _ frame: CGRect) -> some View {
-        view
-            .frame(width: frame.width * s, height: frame.height * s)
-            .offset(x: frame.minX * s, y: frame.minY * s)
+        view.placed(frame, scale: s)
     }
 }
 

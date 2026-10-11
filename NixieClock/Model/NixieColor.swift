@@ -47,6 +47,14 @@ extension Color {
     }
 }
 
+extension Color {
+    /// This color blended toward `other` by `fraction` (0 = unchanged, 1 = `other`).
+    func mixed(with other: NSColor, by fraction: CGFloat) -> Color {
+        let ns = NSColor(self).usingColorSpace(.sRGB) ?? .black
+        return Color(nsColor: ns.blended(withFraction: fraction, of: other) ?? ns)
+    }
+}
+
 /// The colors a lit tube needs, derived from one chosen glow color.
 struct NixieGlow {
     /// The glow itself: used for the halo and the tint inside the glass.
@@ -56,7 +64,6 @@ struct NixieGlow {
 
     init(_ color: Color) {
         self.color = color
-        let ns = NSColor(color).usingColorSpace(.sRGB) ?? .orange
-        core = Color(nsColor: ns.blended(withFraction: 0.3, of: .white) ?? ns)
+        core = color.mixed(with: .white, by: 0.3)
     }
 }
