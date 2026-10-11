@@ -2,11 +2,14 @@ import AppKit
 
 /// A borderless, transparent window that sits on the desktop: above the wallpaper
 /// and desktop icons, below every normal app window, on every Space.
+///
+/// Moving and resizing are handled by `ClockHostingView`, so the window itself
+/// has no resizable style and no background dragging.
 final class DesktopWindow: NSWindow {
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.borderless, .resizable],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
@@ -15,7 +18,6 @@ final class DesktopWindow: NSWindow {
         backgroundColor = .clear
         hasShadow = false
         isReleasedWhenClosed = false
-        isMovableByWindowBackground = true
 
         level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenNone]

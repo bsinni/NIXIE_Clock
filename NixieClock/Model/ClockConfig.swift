@@ -15,6 +15,32 @@ struct ClockConfig: Codable, Identifiable, Equatable {
     var showSeconds = true
     var blinkSeparators = true
     var showPlate = true
+    /// The window's last frame in screen coordinates; nil places it at the default spot.
+    var frame: CGRect?
+    /// Locked clocks ignore the mouse, so clicks pass through to the desktop.
+    var locked = false
+
+    init() {}
+
+    // Decode field by field with defaults, so settings saved by an older version
+    // still load after new fields are added.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = ClockConfig()
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? d.id
+        timeZoneID = try c.decodeIfPresent(String.self, forKey: .timeZoneID)
+        colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex) ?? d.colorHex
+        backgroundHex = try c.decodeIfPresent(String.self, forKey: .backgroundHex) ?? d.backgroundHex
+        backgroundOpacity = try c.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? d.backgroundOpacity
+        backgroundStyle = (try? c.decodeIfPresent(BackgroundStyle.self, forKey: .backgroundStyle)) ?? d.backgroundStyle
+        wood = (try? c.decodeIfPresent(WoodFinish.self, forKey: .wood)) ?? d.wood
+        use24h = try c.decodeIfPresent(Bool.self, forKey: .use24h) ?? d.use24h
+        showSeconds = try c.decodeIfPresent(Bool.self, forKey: .showSeconds) ?? d.showSeconds
+        blinkSeparators = try c.decodeIfPresent(Bool.self, forKey: .blinkSeparators) ?? d.blinkSeparators
+        showPlate = try c.decodeIfPresent(Bool.self, forKey: .showPlate) ?? d.showPlate
+        frame = try c.decodeIfPresent(CGRect.self, forKey: .frame)
+        locked = try c.decodeIfPresent(Bool.self, forKey: .locked) ?? d.locked
+    }
 
     var timeZone: TimeZone {
         timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .current
