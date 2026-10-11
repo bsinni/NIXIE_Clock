@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Owns one clock's desktop window and hosts its SwiftUI view.
 final class ClockWindowController: NSWindowController {
-    static let defaultSize = NSSize(width: 520, height: 180)
+    static let defaultSize = NSSize(width: 520, height: 220)
 
     convenience init() {
         let size = Self.defaultSize
