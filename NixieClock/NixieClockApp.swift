@@ -19,4 +19,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NixieFonts.register()
         manager.openAllWindows()
     }
+
+    /// Launching the app again while it's running opens the settings window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        manager.showSettings()
+        return false
+    }
 }
