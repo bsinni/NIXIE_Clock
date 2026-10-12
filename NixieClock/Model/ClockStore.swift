@@ -32,6 +32,16 @@ final class ClockStore {
         save()
     }
 
+    func add(_ config: ClockConfig) {
+        clocks.append(config)
+        save()
+    }
+
+    func remove(_ id: UUID) {
+        clocks.removeAll { $0.id == id }
+        save()
+    }
+
     private func save() {
         guard let data = try? JSONEncoder().encode(clocks) else { return }
         UserDefaults.standard.set(data, forKey: Self.defaultsKey)

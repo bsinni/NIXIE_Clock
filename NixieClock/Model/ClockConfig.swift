@@ -46,6 +46,11 @@ struct ClockConfig: Codable, Identifiable, Equatable {
         timeZoneID.flatMap(TimeZone.init(identifier:)) ?? .current
     }
 
+    /// The city shown on the nameplate and in the clock list.
+    var cityName: String {
+        TimeZoneCatalog.city(for: timeZoneID)
+    }
+
     var glowColor: Color {
         Color(hex: colorHex) ?? NixieColor.nixieOrange.color
     }

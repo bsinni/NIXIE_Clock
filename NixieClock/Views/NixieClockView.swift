@@ -157,24 +157,9 @@ struct ClockTime {
         if config.showSeconds { values.append(second) }
         digitGroups = values.map { [$0 / 10, $0 % 10] }
 
-        let city = config.timeZoneID?
-            .split(separator: "/").last
-            .map { $0.replacingOccurrences(of: "_", with: " ") }
-            ?? "Local time"
-        var parts = [city, Self.gmtOffset(timeZone.secondsFromGMT(for: date))]
+        var parts = [config.cityName, TimeZoneCatalog.gmtOffset(timeZone.secondsFromGMT(for: date))]
         if !config.use24h { parts.append(hour24 < 12 ? "AM" : "PM") }
         plateText = parts.joined(separator: " · ").uppercased()
-    }
-
-    /// "GMT", "GMT+9", "GMT-7", "GMT+5:30".
-    static func gmtOffset(_ seconds: Int) -> String {
-        guard seconds != 0 else { return "GMT" }
-        let sign = seconds < 0 ? "-" : "+"
-        let hours = abs(seconds) / 3600
-        let minutes = abs(seconds) % 3600 / 60
-        return minutes == 0
-            ? "GMT\(sign)\(hours)"
-            : String(format: "GMT%@%d:%02d", sign, hours, minutes)
     }
 }
 

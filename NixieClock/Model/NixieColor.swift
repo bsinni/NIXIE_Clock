@@ -47,6 +47,15 @@ extension Color {
     }
 }
 
+extension NSColor {
+    /// `#RRGGBB` in sRGB, ignoring alpha.
+    var hexString: String {
+        let c = usingColorSpace(.sRGB) ?? .black
+        func byte(_ v: CGFloat) -> Int { Int((min(max(v, 0), 1) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", byte(c.redComponent), byte(c.greenComponent), byte(c.blueComponent))
+    }
+}
+
 extension Color {
     /// This color blended toward `other` by `fraction` (0 = unchanged, 1 = `other`).
     func mixed(with other: NSColor, by fraction: CGFloat) -> Color {

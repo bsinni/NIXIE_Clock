@@ -63,6 +63,28 @@ final class ClockWindowController: NSWindowController {
         window.setFrame(Self.defaultFrame(for: config), display: true, animate: true)
     }
 
+    /// Resizes around the window's center. 1.0 is the default size.
+    func setScale(_ scale: CGFloat) {
+        guard let window, let config = store.clock(clockID) else { return }
+        let design = ClockLayout(showSeconds: config.showSeconds).size
+        let visible = (window.screen ?? NSScreen.main)?.visibleFrame ?? window.frame
+        let maxWidth = min(visible.width, visible.height * design.width / design.height)
+        let width = min(max(design.width * Self.defaultScale * scale, ClockHostingView.minimumWidth), maxWidth)
+        let height = width * design.height / design.width
+        let frame = window.frame
+        let newFrame = NSRect(x: frame.midX - width / 2, y: frame.midY - height / 2, width: width, height: height)
+        window.setFrame(newFrame, display: true)
+        // Save right away so a slider bound to the saved frame doesn't lag behind.
+        store.update(clockID) { $0.frame = newFrame }
+    }
+
+    /// The current size relative to the default size.
+    static func scale(of config: ClockConfig) -> CGFloat {
+        let design = ClockLayout(showSeconds: config.showSeconds).size
+        let width = config.frame?.width ?? design.width * defaultScale
+        return width / (design.width * defaultScale)
+    }
+
     @objc private func frameDidChange(_ notification: Notification) {
         // Moves and resizes arrive many times per second; save once things settle.
         saveTask?.cancel()
@@ -82,12 +104,14 @@ final class ClockWindowController: NSWindowController {
         return defaultFrame(for: config)
     }
 
-    private static func defaultFrame(for config: ClockConfig) -> NSRect {
+    /// Default size centered on the main screen, shifted down-right by `offset` points
+    /// so new clocks don't land exactly on top of each other.
+    static func defaultFrame(for config: ClockConfig, offset: CGFloat = 0) -> NSRect {
         let design = ClockLayout(showSeconds: config.showSeconds).size
         let size = NSSize(width: design.width * defaultScale, height: design.height * defaultScale)
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         return NSRect(
-            origin: NSPoint(x: screen.midX - size.width / 2, y: screen.midY - size.height / 2),
+            origin: NSPoint(x: screen.midX - size.width / 2 + offset, y: screen.midY - size.height / 2 - offset),
             size: size
         )
     }
