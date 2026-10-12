@@ -1,9 +1,15 @@
 import SwiftUI
 
 /// The menu bar panel: the list of clocks, settings for the selected one, and Quit.
+/// The settings window shows the same view.
 struct MenuPanelView: View {
     let manager: ClockManager
     @State private var selectedID: UUID?
+
+    init(manager: ClockManager, selectedID: UUID? = nil) {
+        self.manager = manager
+        _selectedID = State(initialValue: selectedID)
+    }
 
     private var store: ClockStore { manager.store }
 

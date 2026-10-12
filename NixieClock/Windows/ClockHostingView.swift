@@ -15,7 +15,14 @@ final class ClockHostingView: NSHostingView<ClockWindowContent> {
         var y: CGFloat
     }
 
+    /// Builds the right-click menu. Set by the window controller.
+    var contextMenuProvider: (() -> NSMenu)?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenuProvider?()
+    }
 
     // The clock has no clickable controls, so take every click here instead of
     // letting SwiftUI's internal views claim it; that keeps move and resize working.

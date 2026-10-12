@@ -11,7 +11,7 @@ final class ClockWindowController: NSWindowController {
     private let store: ClockStore
     private var saveTask: Task<Void, Never>?
 
-    init(clockID: UUID, store: ClockStore) {
+    init(clockID: UUID, store: ClockStore, contextMenu: @escaping () -> NSMenu) {
         self.clockID = clockID
         self.store = store
         let config = store.clock(clockID) ?? ClockConfig()
@@ -21,6 +21,7 @@ final class ClockWindowController: NSWindowController {
         let hostingView = ClockHostingView(rootView: ClockWindowContent(store: store, id: clockID))
         // Let the window, not the SwiftUI content, decide the size.
         hostingView.sizingOptions = []
+        hostingView.contextMenuProvider = contextMenu
         window.contentView = hostingView
 
         NotificationCenter.default.addObserver(
