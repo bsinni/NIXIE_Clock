@@ -291,10 +291,8 @@ private struct LitDigitView: View {
     }
 
     static func numeral(_ n: Int, s: CGFloat) -> some View {
-        // Thin, slightly condensed numerals. Swap in a bundled nixie-style font later.
         Text(String(n))
-            .font(.system(size: 176 * s, weight: .ultraLight))
-            .scaleEffect(x: 0.85, y: 1)
+            .font(NixieFonts.numeral(size: 176 * s))
             .fixedSize()
     }
 }

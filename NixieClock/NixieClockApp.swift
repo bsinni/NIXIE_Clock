@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let manager = ClockManager(store: ClockStore())
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NixieFonts.register()
         manager.openAllWindows()
     }
 }

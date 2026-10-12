@@ -121,7 +121,7 @@ private struct Nameplate: View {
         HStack(spacing: 14 * s) {
             screw
             Text(text)
-                .font(.system(size: 15 * s, weight: .semibold, design: .serif))
+                .font(NixieFonts.nameplate(size: 15 * s))
                 .tracking(2.7 * s)
                 .foregroundStyle(Color(red: 0x3F / 255, green: 0x2C / 255, blue: 0x0C / 255))
                 .shadow(color: Color(red: 1, green: 240 / 255, blue: 200 / 255).opacity(0.45), radius: 0, y: s)
