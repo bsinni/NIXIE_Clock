@@ -48,9 +48,59 @@ final class ClockManager {
         windowControllers[id]?.resetFrame()
     }
 
+    /// Opens the settings window, optionally with one clock selected.
+    func showSettings(selecting id: UUID? = nil) {
+        settingsWindow.show(selecting: id)
+    }
+
+    private lazy var settingsWindow = SettingsWindowController(manager: self)
+
     private func openWindow(for id: UUID) {
-        let controller = ClockWindowController(clockID: id, store: store)
+        let controller = ClockWindowController(clockID: id, store: store) { [weak self] in
+            self?.contextMenu(for: id) ?? NSMenu()
+        }
         controller.showWindow(nil)
         windowControllers[id] = controller
+    }
+
+    /// The right-click menu on a clock window.
+    private func contextMenu(for id: UUID) -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(actionMenuItem("Settings…") { [weak self] in self?.showSettings(selecting: id) })
+        menu.addItem(actionMenuItem("Add Clock") { [weak self] in
+            guard let self else { return }
+            self.showSettings(selecting: self.addClock())
+        })
+        menu.addItem(.separator())
+        let remove = actionMenuItem("Remove This Clock") { [weak self] in self?.removeClock(id) }
+        // The last clock can't be removed; Quit is the way to close it.
+        remove.isEnabled = store.clocks.count > 1
+        menu.addItem(remove)
+        menu.autoenablesItems = false
+        menu.addItem(.separator())
+        menu.addItem(actionMenuItem("Quit Nixie Clock") { NSApp.terminate(nil) })
+        return menu
+    }
+}
+
+/// Makes a menu item that runs a closure, so menus don't need an Objective-C target.
+private func actionMenuItem(_ title: String, handler: @escaping () -> Void) -> NSMenuItem {
+    let action = MenuAction(handler)
+    let item = NSMenuItem(title: title, action: #selector(MenuAction.run), keyEquivalent: "")
+    item.target = action
+    // A menu item doesn't retain its target; this keeps the action alive with the item.
+    item.representedObject = action
+    return item
+}
+
+private final class MenuAction: NSObject {
+    private let handler: () -> Void
+
+    init(_ handler: @escaping () -> Void) {
+        self.handler = handler
+    }
+
+    @objc func run() {
+        handler()
     }
 }
