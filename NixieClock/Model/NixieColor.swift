@@ -70,9 +70,12 @@ struct NixieGlow {
     let color: Color
     /// The hot core of the lit digit: the glow color pushed toward white.
     let core: Color
+    /// Identifies the color, for caching rendered digits.
+    let key: String
 
     init(_ color: Color) {
         self.color = color
         core = color.mixed(with: .white, by: 0.3)
+        key = NSColor(color).hexString
     }
 }

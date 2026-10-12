@@ -44,6 +44,10 @@ struct MenuPanelView: View {
 
             Divider()
 
+            LaunchAtLoginToggle()
+
+            Divider()
+
             HStack {
                 Button("Remove Clock", role: .destructive) {
                     guard let id = selected?.id else { return }
@@ -253,6 +257,10 @@ private struct ClockSettingsView: View {
             SettingToggle("Show seconds", isOn: binding(\.showSeconds))
             SettingToggle("Blink separators", isOn: binding(\.blinkSeparators))
             SettingToggle("Show city plate", isOn: binding(\.showPlate))
+            SettingToggle("Animate digit changes", isOn: binding(\.animateDigits))
+                .help("Crossfade tubes when a digit changes. Turn off to use a little less CPU.")
+            SettingToggle("Hourly digit cycle", isOn: binding(\.cathodeCycle))
+                .help("At the top of each hour, every tube runs through all ten digits, as real nixie clocks do.")
         }
     }
 
@@ -297,6 +305,52 @@ private struct ClockSettingsView: View {
             get: { config[keyPath: keyPath] },
             set: { value in manager.update(id) { $0[keyPath: keyPath] = value } }
         )
+    }
+}
+
+// MARK: - App-wide settings
+
+private struct LaunchAtLoginToggle: View {
+    @State private var isEnabled = LaunchAtLogin.isEnabled
+    @State private var needsApproval = LaunchAtLogin.needsApproval
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            SettingToggle("Launch at login", isOn: Binding(
+                get: { isEnabled },
+                set: { newValue in
+                    do {
+                        try LaunchAtLogin.setEnabled(newValue)
+                        errorMessage = nil
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
+                    refresh()
+                }
+            ))
+            if needsApproval {
+                HStack(spacing: 4) {
+                    Text("Needs approval in Login Items.")
+                    Button("Open Settings") { LaunchAtLogin.openLoginItemsSettings() }
+                        .buttonStyle(.link)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .onAppear(perform: refresh)
+    }
+
+    private func refresh() {
+        isEnabled = LaunchAtLogin.isEnabled
+        needsApproval = LaunchAtLogin.needsApproval
     }
 }
 

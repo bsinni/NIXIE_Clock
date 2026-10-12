@@ -15,6 +15,11 @@ struct ClockConfig: Codable, Identifiable, Equatable {
     var showSeconds = true
     var blinkSeparators = true
     var showPlate = true
+    /// Run every tube through all ten digits for two seconds at the top of each hour,
+    /// as real nixie clocks do to keep unused cathodes from wearing out.
+    var cathodeCycle = true
+    /// Crossfade tubes when their digit changes.
+    var animateDigits = true
     /// The window's last frame in screen coordinates; nil places it at the default spot.
     var frame: CGRect?
     /// Locked clocks ignore the mouse, so clicks pass through to the desktop.
@@ -38,6 +43,8 @@ struct ClockConfig: Codable, Identifiable, Equatable {
         showSeconds = try c.decodeIfPresent(Bool.self, forKey: .showSeconds) ?? d.showSeconds
         blinkSeparators = try c.decodeIfPresent(Bool.self, forKey: .blinkSeparators) ?? d.blinkSeparators
         showPlate = try c.decodeIfPresent(Bool.self, forKey: .showPlate) ?? d.showPlate
+        cathodeCycle = try c.decodeIfPresent(Bool.self, forKey: .cathodeCycle) ?? d.cathodeCycle
+        animateDigits = try c.decodeIfPresent(Bool.self, forKey: .animateDigits) ?? d.animateDigits
         frame = try c.decodeIfPresent(CGRect.self, forKey: .frame)
         locked = try c.decodeIfPresent(Bool.self, forKey: .locked) ?? d.locked
     }

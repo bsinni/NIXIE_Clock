@@ -9,6 +9,8 @@ struct NixieTubeView: View {
     /// The lit digit, or nil for a tube with nothing lit.
     var digit: Int?
     var glow: NixieGlow
+    /// Crossfade between digits. Costs about 1% CPU per clock while ticking.
+    var animated = true
 
     static let designSize = CGSize(width: 112, height: 310)
 
@@ -18,7 +20,7 @@ struct NixieTubeView: View {
                 proxy.size.width / Self.designSize.width,
                 proxy.size.height / Self.designSize.height
             )
-            TubeLayers(digit: digit, glow: glow, s: s)
+            TubeLayers(digit: digit, glow: glow, animated: animated, s: s)
                 .frame(width: Self.designSize.width * s, height: Self.designSize.height * s)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -31,6 +33,7 @@ struct NixieTubeView: View {
 private struct TubeLayers: View {
     let digit: Int?
     let glow: NixieGlow
+    let animated: Bool
     /// Points per design unit.
     let s: CGFloat
 
@@ -40,13 +43,42 @@ private struct TubeLayers: View {
     private let socketFrame = CGRect(x: 0, y: 264, width: 112, height: 46)
     private let ringFrame = CGRect(x: 6, y: 264, width: 100, height: 6)
 
+    /// Where the cathodes sit inside the glass.
+    private let cathodeFrame = CGRect(x: 6, y: 44, width: 92, height: 190)
+
+    // The tube is drawn as three stacked layers. The back and front never change
+    // between ticks, so each is flattened into one GPU layer; animation frames then
+    // only redraw the lit digit in the middle.
     var body: some View {
         ZStack(alignment: .topLeading) {
+            back
+            place(litDigitLayer, glassFrame)
+            front
+        }
+    }
+
+    /// Exhaust tip, glass body, ambient tint, and the unlit ghost digits.
+    private var back: some View {
+        ZStack(alignment: .topLeading) {
             place(tip, tipFrame)
-            place(glass, glassFrame)
+            place(glassBack, glassFrame)
+        }
+        .frame(width: NixieTubeView.designSize.width * s, height: NixieTubeView.designSize.height * s, alignment: .topLeading)
+        .drawingGroup()
+    }
+
+    /// Mesh, reflections, glass edge, and the socket.
+    private var front: some View {
+        let margin = 12 * s // room for the socket's shadow
+        return ZStack(alignment: .topLeading) {
+            place(glassFront, glassFrame)
             place(socket, socketFrame)
             place(ring, ringFrame)
         }
+        .frame(width: NixieTubeView.designSize.width * s, height: NixieTubeView.designSize.height * s, alignment: .topLeading)
+        .padding(margin)
+        .drawingGroup()
+        .padding(-margin)
     }
 
     // MARK: Exhaust tip
@@ -78,7 +110,7 @@ private struct TubeLayers: View {
         )
     }
 
-    private var glass: some View {
+    private var glassBack: some View {
         ZStack(alignment: .topLeading) {
             // Glass body: bright at the curved edges, clear through the middle.
             glassShape.fill(LinearGradient(
@@ -102,8 +134,13 @@ private struct TubeLayers: View {
                 .position(x: 52 * s, y: 258 * 0.52 * s)
             }
 
-            place(cathodes, CGRect(x: 6, y: 44, width: 92, height: 190))
+            place(ghostDigits, cathodeFrame)
+        }
+        .clipShape(glassShape)
+    }
 
+    private var glassFront: some View {
+        ZStack(alignment: .topLeading) {
             place(
                 MeshPattern(
                     spacing: 7 * s,
@@ -151,30 +188,40 @@ private struct TubeLayers: View {
     /// Stacking order of the cathodes, back to front, as in a real IN-14 style tube.
     private static let cathodeOrder = [1, 6, 2, 7, 5, 0, 4, 9, 8, 3]
 
-    private var cathodes: some View {
+    private var ghostDigits: some View {
         ZStack {
             ForEach(Self.cathodeOrder, id: \.self) { n in
                 numeral(n)
                     .foregroundStyle(Color(red: 170 / 255, green: 150 / 255, blue: 130 / 255).opacity(0.09))
             }
-
-            if let digit {
-                // Halo built from blurred copies, widest first, then the hot core on top.
-                numeral(digit).foregroundStyle(glow.color).blur(radius: 20 * s).opacity(0.55)
-                numeral(digit).foregroundStyle(glow.color).blur(radius: 8 * s).opacity(0.85)
-                numeral(digit).foregroundStyle(glow.color).blur(radius: 2.5 * s)
-                numeral(digit).foregroundStyle(glow.core)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// The lit digit, clipped to the glass. When the digit changes, the old cathode
+    /// fades out as the new one fades in. It's a pre-rendered image, so the
+    /// animation never has to redraw the blurs.
+    private var litDigitLayer: some View {
+        ZStack(alignment: .topLeading) {
+            place(
+                ZStack {
+                    if let digit {
+                        Image(nsImage: LitDigitCache.image(digit: digit, glow: glow, s: s))
+                            .id(digit)
+                            .transition(.opacity)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity),
+                cathodeFrame
+            )
+        }
+        .frame(width: glassFrame.width * s, height: glassFrame.height * s, alignment: .topLeading)
+        .clipShape(glassShape)
+        .animation(animated ? .easeOut(duration: 0.12) : nil, value: digit)
+    }
+
     private func numeral(_ n: Int) -> some View {
-        // Thin, slightly condensed numerals. Swap in a bundled nixie-style font later.
-        Text(String(n))
-            .font(.system(size: 176 * s, weight: .ultraLight))
-            .scaleEffect(x: 0.85, y: 1)
-            .fixedSize()
+        LitDigitView.numeral(n, s: s)
     }
 
     // MARK: Socket
@@ -218,6 +265,56 @@ private struct TubeLayers: View {
     /// Places a view at a design-grid frame, scaled to points.
     private func place(_ view: some View, _ frame: CGRect) -> some View {
         view.placed(frame, scale: s)
+    }
+}
+
+// MARK: - Lit digit
+
+/// A lit digit: halo built from blurred copies, widest first, then the hot core on top.
+/// Rendered once into an image by `LitDigitCache` so digit changes don't redraw the blurs.
+private struct LitDigitView: View {
+    let digit: Int
+    let glow: NixieGlow
+    let s: CGFloat
+
+    /// Room around the numeral so the widest blur isn't cut off (≥ 2 × its radius).
+    static let blurMargin: CGFloat = 44
+
+    var body: some View {
+        ZStack {
+            Self.numeral(digit, s: s).foregroundStyle(glow.color).blur(radius: 20 * s).opacity(0.55)
+            Self.numeral(digit, s: s).foregroundStyle(glow.color).blur(radius: 8 * s).opacity(0.85)
+            Self.numeral(digit, s: s).foregroundStyle(glow.color).blur(radius: 2.5 * s)
+            Self.numeral(digit, s: s).foregroundStyle(glow.core)
+        }
+        .padding(Self.blurMargin * s)
+    }
+
+    static func numeral(_ n: Int, s: CGFloat) -> some View {
+        // Thin, slightly condensed numerals. Swap in a bundled nixie-style font later.
+        Text(String(n))
+            .font(.system(size: 176 * s, weight: .ultraLight))
+            .scaleEffect(x: 0.85, y: 1)
+            .fixedSize()
+    }
+}
+
+/// Pre-rendered lit digits, keyed by digit, color, and size.
+private enum LitDigitCache {
+    private static var images: [String: NSImage] = [:]
+    /// Resizing a window creates new sizes; start over rather than grow without bound.
+    private static let limit = 160
+
+    static func image(digit: Int, glow: NixieGlow, s: CGFloat) -> NSImage {
+        let key = "\(digit)|\(glow.key)|\(s)"
+        if let cached = images[key] { return cached }
+
+        let renderer = ImageRenderer(content: LitDigitView(digit: digit, glow: glow, s: s))
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        let image = renderer.nsImage ?? NSImage()
+        if images.count >= limit { images.removeAll() }
+        images[key] = image
+        return image
     }
 }
 

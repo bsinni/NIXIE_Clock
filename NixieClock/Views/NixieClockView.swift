@@ -4,14 +4,8 @@ import SwiftUI
 struct NixieClockView: View {
     var config = ClockConfig()
 
-    // Start the schedule on the next whole second so ticks line up with the clock.
-    private let schedule = PeriodicTimelineSchedule(
-        from: Date(timeIntervalSinceReferenceDate: Date.now.timeIntervalSinceReferenceDate.rounded(.up)),
-        by: 1
-    )
-
     var body: some View {
-        TimelineView(schedule) { context in
+        TimelineView(ClockSchedule(timeZone: config.timeZone, cathodeCycle: config.cathodeCycle)) { context in
             GeometryReader { proxy in
                 let design = ClockLayout(showSeconds: config.showSeconds).size
                 let s = min(proxy.size.width / design.width, proxy.size.height / design.height)
@@ -107,7 +101,7 @@ struct ClockFaceView: View {
             ForEach(items.indices, id: \.self) { index in
                 switch items[index] {
                 case let .tube(digit, frame):
-                    NixieTubeView(digit: digit, glow: glow).placed(frame, scale: s)
+                    NixieTubeView(digit: digit, glow: glow, animated: config.animateDigits).placed(frame, scale: s)
                 case let .lamp(frame):
                     SeparatorLampView(lit: lampsLit, glow: glow, s: s).placed(frame, scale: s)
                 }
@@ -155,11 +149,61 @@ struct ClockTime {
         let hour = config.use24h ? hour24 : (hour24 % 12 == 0 ? 12 : hour24 % 12)
         var values = [hour, minute]
         if config.showSeconds { values.append(second) }
-        digitGroups = values.map { [$0 / 10, $0 % 10] }
+        var groups = values.map { [$0 / 10, $0 % 10] }
+
+        // Top of the hour: sweep every tube through all ten digits, each tube offset
+        // from its neighbour so the row ripples.
+        if config.cathodeCycle, let elapsed = Self.cycleElapsed(at: date, in: timeZone) {
+            let step = Int(elapsed * 10)
+            var tube = 0
+            groups = groups.map { group in
+                group.map { _ in
+                    defer { tube += 1 }
+                    return (step + tube * 3) % 10
+                }
+            }
+        }
+        digitGroups = groups
 
         var parts = [config.cityName, TimeZoneCatalog.gmtOffset(timeZone.secondsFromGMT(for: date))]
         if !config.use24h { parts.append(hour24 < 12 ? "AM" : "PM") }
         plateText = parts.joined(separator: " · ").uppercased()
+    }
+
+    /// How long the hourly cathode cycle runs.
+    static let cycleDuration: TimeInterval = 2
+
+    /// Seconds since the top of the hour in `timeZone` if the cathode cycle is running, else nil.
+    /// Uses the zone's offset directly so :30 and :45 zones cycle at their own hour.
+    static func cycleElapsed(at date: Date, in timeZone: TimeZone) -> TimeInterval? {
+        let local = date.timeIntervalSince1970 + Double(timeZone.secondsFromGMT(for: date))
+        let intoHour = local.truncatingRemainder(dividingBy: 3600)
+        return intoHour >= 0 && intoHour < cycleDuration ? intoHour : nil
+    }
+}
+
+/// Ticks on every whole second, and ten times a second while the hourly cathode cycle runs.
+struct ClockSchedule: TimelineSchedule {
+    var timeZone: TimeZone
+    var cathodeCycle: Bool
+
+    func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
+        var next = startDate
+        return AnyIterator {
+            let current = next
+            next = nextDate(after: current, mode: mode)
+            return current
+        }
+    }
+
+    private func nextDate(after date: Date, mode: TimelineScheduleMode) -> Date {
+        let nextSecond = Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate + 0.001).rounded(.up))
+        // In low-frequency mode (e.g. low power), skip the fast cycle frames.
+        if cathodeCycle, mode == .normal,
+           ClockTime.cycleElapsed(at: date + 0.1, in: timeZone) != nil {
+            return min(date + 0.1, nextSecond)
+        }
+        return nextSecond
     }
 }
 
