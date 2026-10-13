@@ -129,6 +129,7 @@ private struct ClockSettingsView: View {
             backgroundSection
             displaySection
             baseSection
+            SettingToggle("Keep on top of other windows", isOn: binding(\.keepOnTop))
             SettingToggle("Lock position (clicks pass through)", isOn: binding(\.locked))
         }
     }
