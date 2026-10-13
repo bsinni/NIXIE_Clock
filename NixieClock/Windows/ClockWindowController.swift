@@ -43,6 +43,7 @@ final class ClockWindowController: NSWindowController {
     func applyConfig() {
         guard let window, let config = store.clock(clockID) else { return }
         window.ignoresMouseEvents = config.locked
+        (window as? DesktopWindow)?.setKeepsOnTop(config.keepOnTop)
 
         // Keep the height and match the width to the clock's shape
         // (it changes when seconds are turned on or off).

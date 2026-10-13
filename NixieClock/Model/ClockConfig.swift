@@ -24,6 +24,8 @@ struct ClockConfig: Codable, Identifiable, Equatable {
     var frame: CGRect?
     /// Locked clocks ignore the mouse, so clicks pass through to the desktop.
     var locked = false
+    /// Float above other app windows instead of sitting on the desktop.
+    var keepOnTop = false
 
     init() {}
 
@@ -47,6 +49,7 @@ struct ClockConfig: Codable, Identifiable, Equatable {
         animateDigits = try c.decodeIfPresent(Bool.self, forKey: .animateDigits) ?? d.animateDigits
         frame = try c.decodeIfPresent(CGRect.self, forKey: .frame)
         locked = try c.decodeIfPresent(Bool.self, forKey: .locked) ?? d.locked
+        keepOnTop = try c.decodeIfPresent(Bool.self, forKey: .keepOnTop) ?? d.keepOnTop
     }
 
     var timeZone: TimeZone {

@@ -71,6 +71,11 @@ final class ClockManager {
             guard let self else { return }
             self.showSettings(selecting: self.addClock())
         })
+        let onTop = actionMenuItem("Keep on Top") { [weak self] in
+            self?.update(id) { $0.keepOnTop.toggle() }
+        }
+        onTop.state = store.clock(id)?.keepOnTop == true ? .on : .off
+        menu.addItem(onTop)
         menu.addItem(.separator())
         let remove = actionMenuItem("Remove This Clock") { [weak self] in self?.removeClock(id) }
         // The last clock can't be removed; Quit is the way to close it.
