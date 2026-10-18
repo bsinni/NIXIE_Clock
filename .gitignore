@@ -18,3 +18,9 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+# Built app / distribution artifacts (publish via GitHub Releases)
+NixieClock.app/
+dmg-staging/
+*.dmg
+NixieClock.zip
